@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useReducer, useEffect } from "react";
+  import React, { createContext, useContext, useReducer, useEffect } from "react";
 import axios from "axios";
 import TaskList from "./domain/TaskList";
 import Task from "./domain/Task";
+  import {TaskPriority} from "./domain/TaskPriority.ts";
+  import {TaskStatus} from "./domain/TaskStatus.ts";
 
 interface AppState {
   taskLists: TaskList[];
@@ -150,14 +152,41 @@ interface AppContextType {
     deleteTaskList: (id: string) => Promise<void>;
     fetchTasks: (taskListId: string) => Promise<void>;
     createTask: (
-      taskListId: string,
-      task: Omit<Task, "id" | "taskListId">
+        taskListId: string,
+        task: {
+          reminder: {
+            date: string | undefined | null;
+            isDateEnabled: boolean;
+            repeatType: string;
+            time: string | null;
+            isTimeEnabled: boolean
+          } | null;
+          dueDate: Date | undefined;
+          description: string;
+          title: string;
+          priority: TaskPriority;
+          status: undefined
+        }
     ) => Promise<void>;
     getTask: (taskListId: string, taskId: string) => Promise<void>;
     updateTask: (
-      taskListId: string,
-      taskId: string,
-      task: Task
+        taskListId: string,
+        taskId: string,
+        task: {
+          reminder: {
+            date: string | undefined | null;
+            isDateEnabled: boolean;
+            repeatType: string;
+            time: string | null;
+            isTimeEnabled: boolean
+          } | null;
+          dueDate: Date | undefined;
+          description: string;
+          id: string;
+          title: string;
+          priority: TaskPriority;
+          status: TaskStatus | undefined
+        }
     ) => Promise<void>;
     deleteTask: (taskListId: string, taskId: string) => Promise<void>;
   };

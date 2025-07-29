@@ -41,11 +41,14 @@ public class Task {
     @Column(name = "updated", nullable = false)
     private LocalDateTime updated;
 
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "reminder_id")
+    private TaskReminder reminder;
 
     public Task() {
     }
 
-    public Task(UUID id, String title, String descripiton, LocalDateTime dueDate, TaskStatus status, TaskPriority priority, TaskList taskList, LocalDateTime created, LocalDateTime updated) {
+    public Task(UUID id, String title, String descripiton, LocalDateTime dueDate, TaskStatus status, TaskPriority priority, TaskList taskList, LocalDateTime created, LocalDateTime updated, TaskReminder reminder) {
         this.id = id;
         this.title = title;
         this.descripiton = descripiton;
@@ -55,6 +58,7 @@ public class Task {
         this.taskList = taskList;
         this.created = created;
         this.updated = updated;
+        this.reminder = reminder;
     }
 
     public UUID getId() {
@@ -129,17 +133,25 @@ public class Task {
         this.updated = updated;
     }
 
+    public TaskReminder getReminder() {
+        return reminder;
+    }
+
+    public void setReminder(TaskReminder reminder) {
+        this.reminder = reminder;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Task task = (Task) o;
-        return Objects.equals(id, task.id) && Objects.equals(title, task.title) && Objects.equals(descripiton, task.descripiton) && Objects.equals(dueDate, task.dueDate) && status == task.status && priority == task.priority && Objects.equals(taskList, task.taskList) && Objects.equals(created, task.created) && Objects.equals(updated, task.updated);
+        return Objects.equals(id, task.id) && Objects.equals(title, task.title) && Objects.equals(descripiton, task.descripiton) && Objects.equals(dueDate, task.dueDate) && status == task.status && priority == task.priority && Objects.equals(taskList, task.taskList) && Objects.equals(created, task.created) && Objects.equals(updated, task.updated) && Objects.equals(reminder, task.reminder);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, title, descripiton, dueDate, status, priority, taskList, created, updated);
+        return Objects.hash(id, title, descripiton, dueDate, status, priority, taskList, created, updated, reminder);
     }
 
     @Override
@@ -154,6 +166,7 @@ public class Task {
                 ", taskList=" + taskList +
                 ", created=" + created +
                 ", updated=" + updated +
+                ", reminder=" + reminder +
                 '}';
     }
 }
