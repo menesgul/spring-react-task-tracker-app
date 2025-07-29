@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Button, Input, Textarea, Spacer, Card, Chip } from "@nextui-org/react";
+import {Button, Input, Textarea, Spacer, Card, Chip, Switch, TimeInput, SelectItem, Select} from "@nextui-org/react";
 import { ArrowLeft } from "lucide-react";
 import { useAppContext } from "../AppProvider";
 import { useNavigate, useParams } from "react-router-dom";
@@ -8,11 +8,15 @@ import { TaskPriority } from "../domain/TaskPriority";
 import { DatePicker } from "@nextui-org/date-picker";
 import { TaskStatus } from "../domain/TaskStatus";
 import { parseDate } from "@internationalized/date";
+import { parseTime } from "@internationalized/date";
+
 
 const CreateUpdateTaskScreen: React.FC = () => {
   const { state, api } = useAppContext();
   const { listId, taskId } = useParams();
   const navigate = useNavigate();
+
+
 
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdate, setIsUpdate] = useState(false);
@@ -23,6 +27,32 @@ const CreateUpdateTaskScreen: React.FC = () => {
   const [priority, setPriority] = useState(TaskPriority.MEDIUM);
   const [status, setStatus] = useState<TaskStatus | undefined>(undefined);
 
+  // Reminder states
+  const [isDateEnabled, setIsDateEnabled] = useState(false);
+  const [isTimeEnabled, setIsTimeEnabled] = useState(false);
+  const [reminderDate, setReminderDate] = useState<Date | undefined>(undefined);
+  const [reminderTime, setReminderTime] = useState<string>("08:00");
+  const [repeatType, setRepeatType] = useState<string>("NEVER");
+
+  const repeatOptions = [
+    "NEVER",
+    "DAILY",
+    "WEEKDAYS",
+    "WEEKENDS",
+    "WEEKLY",
+    "BIWEEKLY",
+    "MONTHLY",
+    "QUARTERLY",
+    "SEMI_ANNUALLY",
+    "YEARLY"
+  ];
+
+  useEffect(() => {
+    if (isTimeEnabled) {
+      setIsDateEnabled(true);
+    }
+  }, [isTimeEnabled]);
+
   // Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
@@ -31,10 +61,11 @@ const CreateUpdateTaskScreen: React.FC = () => {
         return;
       }
 
+
       setIsLoading(true);
       try {
         console.log("Loading initial data...");
-        
+
         // First ensure we have the task list
         if (!state.taskLists.find(tl => tl.id === listId)) {
           await api.getTaskList(listId);
@@ -43,10 +74,10 @@ const CreateUpdateTaskScreen: React.FC = () => {
         // Load the individual task
         const taskResponse = await api.getTask(listId, taskId);
         console.log("Task loaded:", taskResponse);
-        
+
         // Check state after loading
         console.log("Current state after load:", state);
-        
+
         // Get task from state
         const task = state.tasks[listId]?.find(t => t.id === taskId);
         console.log("Found task in state:", task);
@@ -78,24 +109,42 @@ const CreateUpdateTaskScreen: React.FC = () => {
 
   // Watch for task updates in state
   useEffect(() => {
-    if (listId && taskId && state.tasks[listId]) {
-      const task = state.tasks[listId].find(t => t.id === taskId);
-      console.log("State updated, current task:", task);
-      
-      if (task) {
-        console.log("Updating form with task from state update:", task);
-        setTitle(task.title);
-        setDescription(task.description || "");
-        setDueDate(task.dueDate ? new Date(task.dueDate) : undefined);
-        setPriority(task.priority || TaskPriority.MEDIUM);
-        setStatus(task.status);
-      }
-    }
-  }, [listId, taskId, state.tasks]);
+    if (!listId || !taskId) return;
+
+    const taskList = state.tasks[listId as string];
+    if (!taskList) return;
+
+    const task = taskList.find((t: any) => t.id === taskId);
+    if (!task) return;
+
+    setTitle(task.title);
+    setDescription(task.description || "");
+    setDueDate(task.dueDate ? new Date(task.dueDate) : undefined);
+    setPriority(task.priority || TaskPriority.MEDIUM);
+    setStatus(task.status);
+  }, [taskId, listId]);
+
+
 
   const createUpdateTask = async () => {
     try {
       if (!listId) return;
+
+      const reminder =
+          isDateEnabled || isTimeEnabled
+              ? {
+                isDateEnabled,
+                isTimeEnabled,
+                date: isDateEnabled ? reminderDate?.toISOString().split("T")[0] : null,
+                time: isTimeEnabled
+                    ? reminderTime.includes(":") && reminderTime.split(":").length === 2
+                        ? `${reminderTime}:00`
+                        : reminderTime
+                    : null,
+                repeatType
+              }
+              : null;
+
 
       if (isUpdate && taskId) {
         await api.updateTask(listId, taskId, {
@@ -105,6 +154,7 @@ const CreateUpdateTaskScreen: React.FC = () => {
           dueDate,
           priority,
           status,
+          reminder,
         });
       } else {
         await api.createTask(listId, {
@@ -113,6 +163,7 @@ const CreateUpdateTaskScreen: React.FC = () => {
           dueDate,
           priority,
           status: undefined,
+          reminder,
         });
       }
 
@@ -140,68 +191,119 @@ const CreateUpdateTaskScreen: React.FC = () => {
   }
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      <div className="flex items-center space-x-4 mb-6">
-        <Button 
-          variant="ghost"
-          aria-label="Go back"
-          onClick={() => navigate(`/task-lists/${listId}`)}
-        >
-          <ArrowLeft size={20} />
-        </Button>
-        <h1 className="text-2xl font-bold">
-          {isUpdate ? "Update Task" : "Create Task"}
-        </h1>
-      </div>
-      {error && <Card className="mb-4 p-4 text-red-500">{error}</Card>}
-      <form onSubmit={(e) => e.preventDefault()}>
-        <Input
-          label="Title"
-          placeholder="Enter task title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-          fullWidth
-        />
-        <Spacer y={1} />
-        <Textarea
-          label="Description"
-          placeholder="Enter task description (optional)"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          fullWidth
-        />
-        <Spacer y={1} />
-        <DatePicker
-          label="Due date (optional)"
-          defaultValue={dueDate ? parseDate(formatDateForPicker(dueDate)!) : undefined}
-          onChange={(newDate) => handleDateChange(newDate ? new Date(newDate.toString()) : null)}
-        />
-        <Spacer y={4} />
-        <div className="flex justify-between mx-auto gap-2">
-          {Object.values(TaskPriority).map((p) => (
-            <Chip
-              key={p}
-              color={priority === p ? "primary" : "default"}
-              variant={priority === p ? "solid" : "faded"}
-              onClick={() => setPriority(p)}
-              className="cursor-pointer"
-            >
-              {p} Priority
-            </Chip>
-          ))}
+      <div className="p-4 max-w-md mx-auto">
+        <div className="flex items-center space-x-4 mb-6">
+          <Button
+              variant="ghost"
+              aria-label="Go back"
+              onClick={() => navigate(`/task-lists/${listId}`)}
+          >
+            <ArrowLeft size={20} />
+          </Button>
+          <h1 className="text-2xl font-bold">
+            {isUpdate ? "Update Task" : "Create Task"}
+          </h1>
         </div>
-        <Spacer y={4} />
-        <Button 
-          type="submit" 
-          color="primary" 
-          onClick={createUpdateTask}
-          fullWidth
-        >
-          {isUpdate ? "Update Task" : "Create Task"}
-        </Button>
-      </form>
-    </div>
+        {error && <Card className="mb-4 p-4 text-red-500">{error}</Card>}
+        <form onSubmit={(e) => e.preventDefault()}>
+          <Input
+              label="Title"
+              placeholder="Enter task title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              fullWidth
+          />
+          <Spacer y={1} />
+          <Spacer y={1} />
+          <Card className="p-4 space-y-3">
+            <h3 className="text-md font-semibold">Reminder</h3>
+
+            <Switch isSelected={isDateEnabled} onValueChange={setIsDateEnabled}>
+              Tarih
+            </Switch>
+            {isDateEnabled && (
+                <DatePicker
+                    label="Reminder Date"
+                    defaultValue={reminderDate ? parseDate(reminderDate.toISOString().split("T")[0]) : undefined}
+                    onChange={(d) => {
+                      if (d) {
+                        setReminderDate(new Date(d.toString()));
+                      }
+                    }}
+                />
+
+            )}
+
+            <Switch isSelected={isTimeEnabled} onValueChange={setIsTimeEnabled}>
+              Saat
+            </Switch>
+            {isTimeEnabled && (
+                <TimeInput
+                    label="Reminder Hour"
+                    value={parseTime(reminderTime)}
+                    onChange={(value) => {
+                      if (value) {
+                        const hour = value.hour.toString().padStart(2, "0");
+                        const minute = value.minute.toString().padStart(2, "0");
+                        setReminderTime(`${hour}:${minute}:00`);
+                      }
+                    }}
+                />
+
+            )}
+
+            {(isDateEnabled || isTimeEnabled) && (
+                <Select label="Yinele" selectedKeys={[repeatType]} onChange={(e) => setRepeatType(e.target.value)}>
+                  {repeatOptions.map((opt) => (
+                      <SelectItem key={opt} value={opt}>
+                        {opt}
+                      </SelectItem>
+                  ))}
+                </Select>
+            )}
+          </Card>
+
+          <Spacer y={4} />
+
+          <Textarea
+              label="Description"
+              placeholder="Enter task description (optional)"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              fullWidth
+          />
+          <Spacer y={1} />
+          <DatePicker
+              label="Due date (optional)"
+              defaultValue={dueDate ? parseDate(formatDateForPicker(dueDate)!) : undefined}
+              onChange={(newDate) => handleDateChange(newDate ? new Date(newDate.toString()) : null)}
+          />
+          <Spacer y={4} />
+          <div className="flex justify-between mx-auto gap-2">
+            {Object.values(TaskPriority).map((p) => (
+                <Chip
+                    key={p}
+                    color={priority === p ? "primary" : "default"}
+                    variant={priority === p ? "solid" : "faded"}
+                    onClick={() => setPriority(p)}
+                    className="cursor-pointer"
+                >
+                  {p} Priority
+                </Chip>
+            ))}
+          </div>
+          <Spacer y={4} />
+          <Button
+              type="submit"
+              color="primary"
+              onClick={createUpdateTask}
+              fullWidth
+          >
+            {isUpdate ? "Update Task" : "Create Task"}
+          </Button>
+        </form>
+      </div>
   );
 };
 

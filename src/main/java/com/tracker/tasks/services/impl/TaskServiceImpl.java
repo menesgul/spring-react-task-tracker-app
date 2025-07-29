@@ -1,10 +1,8 @@
 package com.tracker.tasks.services.impl;
 
-import com.tracker.tasks.domain.entities.Task;
-import com.tracker.tasks.domain.entities.TaskList;
-import com.tracker.tasks.domain.entities.TaskPriority;
-import com.tracker.tasks.domain.entities.TaskStatus;
+import com.tracker.tasks.domain.entities.*;
 import com.tracker.tasks.repositories.TaskListRepository;
+import com.tracker.tasks.repositories.TaskReminderRepository;
 import com.tracker.tasks.repositories.TaskRepository;
 import com.tracker.tasks.services.TaskService;
 import jakarta.transaction.Transactional;
@@ -21,10 +19,14 @@ public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
     private final TaskListRepository taskListRepository;
+    private final TaskReminderRepository taskReminderRepository;
 
-    public TaskServiceImpl(TaskRepository taskRepository, TaskListRepository taskListRepository) {
+    public TaskServiceImpl(TaskRepository taskRepository,
+                           TaskListRepository taskListRepository,
+                           TaskReminderRepository taskReminderRepository) {
         this.taskRepository = taskRepository;
         this.taskListRepository = taskListRepository;
+        this.taskReminderRepository = taskReminderRepository;
     }
 
     @Override
@@ -60,7 +62,8 @@ public class TaskServiceImpl implements TaskService {
                 taskPriority,
                 taskList,
                 now,
-                now
+                now,
+                task.getReminder()
         );
         return taskRepository.save(taskToSave);
 
@@ -111,10 +114,62 @@ kullanıcı bosluk bırakırsa  isEmpty boş değil diyecek
         existingTask.setStatus(task.getStatus());
         existingTask.setPriority(task.getPriority());
         existingTask.setUpdated(LocalDateTime.now());
+
+
+        if (task.getReminder() != null) {
+            TaskReminder incomingReminder = task.getReminder();
+            TaskReminder reminderToPersist;
+
+            if (incomingReminder.getId() != null) {
+
+                reminderToPersist = taskReminderRepository.findById(incomingReminder.getId())
+                        .orElseThrow(() -> new IllegalArgumentException("Reminder not found"));
+
+                // Alanları güncellemek icin
+                validateReminder(incomingReminder);
+
+                reminderToPersist.setDate(incomingReminder.getDate());
+                reminderToPersist.setTime(incomingReminder.getTime());
+                reminderToPersist.setDateEnabled(incomingReminder.isDateEnabled());
+                reminderToPersist.setTimeEnabled(incomingReminder.isTimeEnabled());
+                reminderToPersist.setRepeatType(incomingReminder.getRepeatType());
+
+            } else {
+                // İlk defa oluşturuluyorsa
+                reminderToPersist = incomingReminder;
+            }
+
+            existingTask.setReminder(reminderToPersist);
+        } else {
+            existingTask.setReminder(null); // reminder null geldiyse ilişkisini kopar
+        }
+
         return taskRepository.save(existingTask);
 
-
     }
+    private void validateReminder(TaskReminder reminder) {
+        if (reminder.isTimeEnabled() && !reminder.isDateEnabled()) {
+            throw new IllegalArgumentException("Saat seçiliyse tarih de seçilmiş olmalı.");
+        }
+
+        if (reminder.isDateEnabled() && reminder.getDate() == null) {
+            throw new IllegalArgumentException("Tarih seçiliyse bir tarih atanmalı.");
+        }
+
+        if (reminder.isTimeEnabled() && reminder.getTime() == null) {
+            throw new IllegalArgumentException("Saat seçiliyse bir saat atanmalı.");
+        }
+
+        if ((reminder.isDateEnabled() || reminder.isTimeEnabled()) && reminder.getRepeatType() == null) {
+            throw new IllegalArgumentException("Yineleme tipi boş olamaz.");
+        }
+
+        if (!reminder.isDateEnabled() && !reminder.isTimeEnabled() && reminder.getRepeatType() != null) {
+            throw new IllegalArgumentException("Tarih ve saat kapalıyken tekrar seçilemez.");
+        }
+    }
+
+
     @Transactional
     @Override
     public void deleteTask(UUID taskListId, UUID taskId) {
