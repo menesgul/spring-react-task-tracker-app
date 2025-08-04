@@ -1,15 +1,16 @@
 package com.tracker.tasks.mappers.impl;
 
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.stereotype.Component;
+
 import com.tracker.tasks.domain.dto.TaskListDto;
 import com.tracker.tasks.domain.entities.Task;
 import com.tracker.tasks.domain.entities.TaskList;
 import com.tracker.tasks.domain.entities.TaskStatus;
 import com.tracker.tasks.mappers.TaskListMapper;
 import com.tracker.tasks.mappers.TaskMapper;
-import org.springframework.stereotype.Component;
-
-import java.util.List;
-import java.util.Optional;
 
 @Component
 public class TaskListMapperImpl implements TaskListMapper {
@@ -42,6 +43,7 @@ public class TaskListMapperImpl implements TaskListMapper {
                                 .toList() // Stream'den sonra elde ettiğin sonucu tekrar bir List olarak almanı sağlar.
 
                         ).orElse(null),
+                null,
                 null,
                 null
         );
