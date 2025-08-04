@@ -1,18 +1,16 @@
 package com.tracker.tasks.repositories;
 
-
-import com.tracker.tasks.domain.entities.TaskList;
 import com.tracker.tasks.domain.entities.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+
 @Repository
-public interface TaskListRepository extends JpaRepository<TaskList, UUID> {
-    List<TaskList> findAllByOwner(User owner);
-    Optional<TaskList> findByIdAndOwner(UUID id, User owner);
+public interface UserRepository extends JpaRepository<User, UUID> {
+    Optional<User> findByEmail(String email);
+    Optional<User> findByUsername(String username);
 
 }

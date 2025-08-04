@@ -50,7 +50,7 @@ const TaskListScreen: React.FC = () => {
       }
     };
 
-    void loadInitialData(); // ✅ TS uyarısı giderildi
+    void loadInitialData();
   }, [listId]);
 
   const completionPercentage = React.useMemo(() => {

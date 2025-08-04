@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.tracker.tasks.domain.entities.User;
 
 @RestController
 @RequestMapping(path="api/task-lists")
@@ -25,18 +27,19 @@ public class TaskListController {
 
 
     @GetMapping
-    public List<TaskListDto> listTaskLists() {
-      return  taskListService.listTaskList().stream()
+    public List<TaskListDto> listTaskLists(@AuthenticationPrincipal User user) {
+      return  taskListService.listTaskList(user).stream()
                 .map(taskListMapper::toDto) // dbdeki data DTO formatına dönüsüp listeleniyor.
                 .toList();
     }
 
     @PostMapping
-    public TaskListDto createTaskList(@RequestBody TaskListDto taskListDto) { // burda api'den   JSON formatındaki body, otomatik olarak taskListDto nesnesine dönüştürülür.
+    public TaskListDto createTaskList(@RequestBody TaskListDto taskListDto, @AuthenticationPrincipal User user) { // burda api'den   JSON formatındaki body, otomatik olarak taskListDto nesnesine dönüştürülür.
    TaskList createdTaskList =  taskListService.createTaskList( // burada servis katmanındaki metotu cağırdım.
                         // bu metot calıstı iste title boş mu baktı id var mı baktı her sey uygunsa repository.save() yapıp db'ye kaydetti
 
-             taskListMapper.fromDto(taskListDto) //  DTO → Entity (TaskList) dönüşümü yapılır.
+             taskListMapper.fromDto(taskListDto),
+             user
      );                                          // Çünkü Service katmanı TaskList (entity) ile çalışır, DTO ile değil.
 
 
@@ -46,8 +49,8 @@ public class TaskListController {
 
     }
         @GetMapping(path= "/{task_list_id}")
-        public Optional<TaskListDto> getTaskList(@PathVariable("task_list_id") UUID taskListId) {
-            return  taskListService.getTaskList(taskListId).map(taskListMapper::toDto);
+        public Optional<TaskListDto> getTaskList(@PathVariable("task_list_id") UUID taskListId, @AuthenticationPrincipal User user) {
+            return  taskListService.getTaskList(taskListId, user).map(taskListMapper::toDto);
 
         }
 /*       burada @PathVariable url yolundaki {task_list_id} kısmını alır.
@@ -66,18 +69,20 @@ public class TaskListController {
     @PutMapping(path = "/{task_list_id}")
     public TaskListDto updateTaskList(
             @PathVariable("task_list_id") UUID taskListId,
-            @RequestBody TaskListDto taskListDto) {
+            @RequestBody TaskListDto taskListDto,
+            @AuthenticationPrincipal User user) {
 
       TaskList updatedTaskList =   taskListService.updateTaskList(
                 taskListId,
-                taskListMapper.fromDto(taskListDto)  // dto to real object form. bu sayede servis katmanında işlem yapıp gercek nesne haliyle db de update edilir
+                taskListMapper.fromDto(taskListDto),
+                user
         );
         return taskListMapper.toDto(updatedTaskList); // fe 'ye objectin Dto formu returnlenir.
     }
 
     @DeleteMapping(path = "/{task_list_id}")
-    public void deleteTaskList(@PathVariable("task_list_id") UUID taskListId) {
-        taskListService.deleteTaskList(taskListId);
+    public void deleteTaskList(@PathVariable("task_list_id") UUID taskListId, @AuthenticationPrincipal User user) {
+        taskListService.deleteTaskList(taskListId, user);
     }
 
 }

@@ -36,16 +36,21 @@ public class TaskList {
     @Column(name = "updated", nullable = false)
     private LocalDateTime updated;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User owner;
+
     public TaskList() {
     }
 
-    public TaskList(UUID id, String title, String description, List<Task> tasks, LocalDateTime created, LocalDateTime updated) {
+    public TaskList(UUID id, String title, String description, List<Task> tasks, LocalDateTime created, LocalDateTime updated, User owner) {
         this.id = id;
         this.title = title;
         this.description = description;
         this.tasks = tasks;
         this.created = created;
         this.updated = updated;
+        this.owner = owner;
     }
 
     public UUID getId() {
@@ -96,17 +101,25 @@ public class TaskList {
         this.updated = updated;
     }
 
+    public User getOwner() {
+        return owner;
+    }
+
+    public void setOwner(User owner) {
+        this.owner = owner;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TaskList taskList = (TaskList) o;
-        return Objects.equals(id, taskList.id) && Objects.equals(title, taskList.title) && Objects.equals(description, taskList.description) && Objects.equals(tasks, taskList.tasks) && Objects.equals(created, taskList.created) && Objects.equals(updated, taskList.updated);
+        return Objects.equals(id, taskList.id) && Objects.equals(title, taskList.title) && Objects.equals(description, taskList.description) && Objects.equals(tasks, taskList.tasks) && Objects.equals(created, taskList.created) && Objects.equals(updated, taskList.updated) && Objects.equals(owner, taskList.owner);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, title, description, tasks, created, updated);
+        return Objects.hash(id, title, description, tasks, created, updated, owner);
     }
 
     @Override
@@ -118,6 +131,7 @@ public class TaskList {
                 ", tasks=" + tasks +
                 ", created=" + created +
                 ", updated=" + updated +
+                ", owner=" + owner +
                 '}';
     }
 }
